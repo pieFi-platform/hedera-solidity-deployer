@@ -45,7 +45,8 @@ solcjs --bin ./src/contracts/SmartContractExample.sol -o ./src/contracts/bin
 ```
 
 > **NOTE:** If the solcjs command above fails, try reinstalling solc (npm install solc). 
-> **NOTE:** Once the smart contract is compiled, we'll need to use the path of the newly created .bin file in the .env file as the BIN variable in the next step.
+
+Once the smart contract is compiled, we'll need to use the path of the newly created .bin file in the .env file as the BIN variable in the next step.
 
 ## Create .env File
 
