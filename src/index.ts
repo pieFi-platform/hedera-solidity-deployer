@@ -10,6 +10,7 @@ import {
 	ContractCreateTransaction,
 	ContractFunctionParameters,
 	ContractCallQuery,
+	Hbar,
 } from "@hashgraph/sdk";
 import fs from "fs";
 
@@ -19,6 +20,9 @@ const operatorKey = PrivateKey.fromString(process.env.OPERATOR_PVKEY);
 
 const client = Client.forTestnet().setOperator(operatorId, operatorKey); // Currently only for testnet
 
+const keys: string[] = JSON.parse(process.env.KEYS);
+const signKeys = keys.map((key: string) => PrivateKey.fromString(key));
+
 async function main() {
 	const chunkSize = 1024; // Max chunk size (Hedera uploads in chunks of 1kb)
 	const successCode = 22; // A transaction receipt returns a status code of 22 if the transaction was a success
@@ -27,19 +31,35 @@ async function main() {
 	const contractBytecode = fs.readFileSync(process.env.BIN);
 
 	// Determine size of bin file and chunks
-	const contractBytecodeSizeKB = fs.statSync(process.env.BIN).size;
-	const maxChunks = Math.ceil(contractBytecodeSizeKB / chunkSize) + 1;
+	const contractBytecodeSizeB = fs.statSync(process.env.BIN).size;
+	const maxChunks = Math.ceil(contractBytecodeSizeB / chunkSize) + 1;
+	console.log("Contract size is: ", contractBytecodeSizeB);
 	console.log("Number of chunks is: ", maxChunks);
 
-	console.log("Contract size is: ", contractBytecodeSizeKB);
-
 	try {
-		// Create empty file transaction
-		const fileCreateTx = new FileCreateTransaction()
-			.setKeys([operatorKey])
-			.freezeWith(client);
-		const fileCreateSign = await fileCreateTx.sign(operatorKey);
-		const fileCreateSubmit = await fileCreateSign.execute(client);
+		//////////////////Create empty file transaction//////////////////
+		const fileCreateTx = new FileCreateTransaction().setKeys(signKeys);
+
+		// Add any additional methods
+		if (process.env.FILE_MEMO) {
+			fileCreateTx.setFileMemo(process.env.FILE_MEMO);
+			console.log(`Added file memo`);
+		}
+		if (process.env.EXPIRATION_DAYS) {
+			const expirationDays =
+				parseInt(process.env.EXPIRATION_DAYS) * 24 * 60 * 60 * 1000; // Caclulating expiration days in milliseconds
+			fileCreateTx.setExpirationTime(
+				new Date(Date.now() + expirationDays)
+			); //ERROR - working with ~90 days, but returning AUTORENEW_DURATION_NOT_IN_RANGE otherwise
+			console.log(`Added expiration date`);
+		}
+		// Freeze and sign
+		fileCreateTx.freezeWith(client);
+		for (const key of signKeys) {
+			fileCreateTx.sign(key);
+		}
+
+		const fileCreateSubmit = await fileCreateTx.execute(client);
 		const fileCreateRx = await fileCreateSubmit.getReceipt(client);
 		const fileCreateStatus = fileCreateRx.status._code;
 		const bytecodeFileId = fileCreateRx.fileId;
@@ -52,14 +72,18 @@ async function main() {
 		// Log bytecode file ID
 		console.log(`The bytecode file ID is: ${bytecodeFileId}`);
 
-		// Append contents to the file
+		//////////////////Append contents to the file//////////////////
 		const fileAppendTx = new FileAppendTransaction()
 			.setFileId(bytecodeFileId)
 			.setContents(contractBytecode)
 			.setMaxChunks(maxChunks)
 			.freezeWith(client);
-		const fileAppendSign = await fileAppendTx.sign(operatorKey);
-		const fileAppendSubmit = await fileAppendSign.execute(client);
+
+		// Sign transaction
+		for (const key of signKeys) {
+			fileAppendTx.sign(key);
+		}
+		const fileAppendSubmit = await fileAppendTx.execute(client);
 		const fileAppendRx = await fileAppendSubmit.getReceipt(client);
 		const fileAppendStatus = fileAppendRx.status._code;
 
@@ -71,8 +95,10 @@ async function main() {
 		// Log file append transaction status
 		console.log(`The file append was a : ${fileAppendRx.status}`);
 
-		// Parse constructor parameters and create string
-		const parameters = JSON.parse(process.env.CONSTRUCTOR_PARAMS);
+		//------Parse constructor parameters and create string-----
+		const parameters = process.env.CONSTRUCTOR_PARAMS
+			? JSON.parse(process.env.CONSTRUCTOR_PARAMS)
+			: {};
 		let constructorParams = new ContractFunctionParameters();
 
 		for (const key in parameters) {
@@ -160,11 +186,39 @@ async function main() {
 			}
 		}
 
-		// Instantiate smart contract
+		//////////////////Instantiate smart contract//////////////////
 		const contractInstantiateTx = new ContractCreateTransaction()
 			.setBytecodeFileId(bytecodeFileId)
-			.setGas(parseInt(process.env.CONTRACT_GAS))
-			.setConstructorParameters(constructorParams);
+			.setGas(parseInt(process.env.CONTRACT_GAS));
+
+		// Add any additional methods
+		if (process.env.CONSTRUCTOR_PARAMS) {
+			contractInstantiateTx.setConstructorParameters(constructorParams);
+			console.log(`Set constructor params`);
+		}
+		if (process.env.INITIAL_HBAR_BALANCE) {
+			const hbarBalance = parseInt(process.env.INITIAL_HBAR_BALANCE);
+			contractInstantiateTx.setInitialBalance(new Hbar(hbarBalance));
+			console.log(`Set initial balance`);
+		}
+		if (process.env.PROXY_ACCOUNT_ID) {
+			contractInstantiateTx.setProxyAccountId(
+				process.env.PROXY_ACCOUNT_ID
+			);
+			console.log(`Set proxy account id`);
+		}
+		if (process.env.CONTRACT_MEMO) {
+			contractInstantiateTx.setContractMemo(process.env.CONTRACT_MEMO);
+			console.log(`Set contract memo`);
+		}
+		if (process.env.ADMIN_KEY) {
+			const adminKey = PrivateKey.fromString(process.env.ADMIN_KEY);
+			contractInstantiateTx.setAdminKey(adminKey);
+			contractInstantiateTx.freezeWith(client);
+			contractInstantiateTx.sign(adminKey);
+			console.log(`Set admin key`);
+		}
+
 		const contractInstantiateSubmit = await contractInstantiateTx.execute(
 			client
 		);
@@ -177,7 +231,6 @@ async function main() {
 		if (contractInstantiateStatus !== successCode || !contractId) {
 			throw new Error(`The file append transaction failed`);
 		}
-
 		const contractAddress = contractId.toSolidityAddress();
 
 		// Log contract Id and Solidity address for contract
@@ -186,7 +239,7 @@ async function main() {
 			`The smart contract Solidity address is: ${contractAddress}`
 		);
 
-		// Query the contract to check changes in state variable - JUST FOR TESTING
+		//----JUST FOR TESTING----Query the contract to check changes in state variable----JUST FOR TESTING
 		const contractQueryTx = new ContractCallQuery()
 			.setContractId(contractId)
 			.setGas(100000)
