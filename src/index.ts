@@ -34,16 +34,17 @@ async function main() {
 	const contractBytecodeSizeB = fs.statSync(process.env.BIN).size;
 	const maxChunks = Math.ceil(contractBytecodeSizeB / chunkSize) + 1;
 	console.log("Contract size is: ", contractBytecodeSizeB);
-	console.log("Number of chunks is: ", maxChunks);
+	console.log("Number of chunks is: ", maxChunks, `\n`);
 
 	try {
 		//////////////////Create empty file transaction//////////////////
+		console.log(`Creating file...`);
 		const fileCreateTx = new FileCreateTransaction().setKeys(signKeys);
 
 		// Add any additional methods
 		if (process.env.FILE_MEMO) {
 			fileCreateTx.setFileMemo(process.env.FILE_MEMO);
-			console.log(`Added file memo`);
+			console.log(`-Added file memo-`);
 		}
 		if (process.env.EXPIRATION_DAYS) {
 			const expirationDays =
@@ -51,7 +52,7 @@ async function main() {
 			fileCreateTx.setExpirationTime(
 				new Date(Date.now() + expirationDays)
 			); //ERROR - working with ~90 days, but returning AUTORENEW_DURATION_NOT_IN_RANGE otherwise
-			console.log(`Added expiration date`);
+			console.log(`-Added expiration date- \n`);
 		}
 		// Freeze and sign
 		fileCreateTx.freezeWith(client);
@@ -70,9 +71,10 @@ async function main() {
 		}
 
 		// Log bytecode file ID
-		console.log(`The bytecode file ID is: ${bytecodeFileId}`);
+		console.log(`The bytecode file ID is: ${bytecodeFileId} \n`);
 
 		//////////////////Append contents to the file//////////////////
+		console.log(`Appending to file...`);
 		const fileAppendTx = new FileAppendTransaction()
 			.setFileId(bytecodeFileId)
 			.setContents(contractBytecode)
@@ -93,7 +95,7 @@ async function main() {
 		}
 
 		// Log file append transaction status
-		console.log(`The file append was a : ${fileAppendRx.status}`);
+		console.log(`The file append was a : ${fileAppendRx.status} 👍 \n`);
 
 		//------Parse constructor parameters and create string-----
 		const parameters = process.env.CONSTRUCTOR_PARAMS
@@ -187,6 +189,7 @@ async function main() {
 		}
 
 		//////////////////Instantiate smart contract//////////////////
+		console.log(`Creating smart contract...`);
 		const contractInstantiateTx = new ContractCreateTransaction()
 			.setBytecodeFileId(bytecodeFileId)
 			.setGas(parseInt(process.env.CONTRACT_GAS));
@@ -194,29 +197,29 @@ async function main() {
 		// Add any additional methods
 		if (process.env.CONSTRUCTOR_PARAMS) {
 			contractInstantiateTx.setConstructorParameters(constructorParams);
-			console.log(`Set constructor params`);
+			console.log(`-Set constructor params-`);
 		}
 		if (process.env.INITIAL_HBAR_BALANCE) {
 			const hbarBalance = parseInt(process.env.INITIAL_HBAR_BALANCE);
 			contractInstantiateTx.setInitialBalance(new Hbar(hbarBalance));
-			console.log(`Set initial balance`);
+			console.log(`-Set initial balance-`);
 		}
 		if (process.env.PROXY_ACCOUNT_ID) {
 			contractInstantiateTx.setProxyAccountId(
 				process.env.PROXY_ACCOUNT_ID
 			);
-			console.log(`Set proxy account id`);
+			console.log(`-Set proxy account id-`);
 		}
 		if (process.env.CONTRACT_MEMO) {
 			contractInstantiateTx.setContractMemo(process.env.CONTRACT_MEMO);
-			console.log(`Set contract memo`);
+			console.log(`-Set contract memo-`);
 		}
 		if (process.env.ADMIN_KEY) {
 			const adminKey = PrivateKey.fromString(process.env.ADMIN_KEY);
 			contractInstantiateTx.setAdminKey(adminKey);
 			contractInstantiateTx.freezeWith(client);
 			contractInstantiateTx.sign(adminKey);
-			console.log(`Set admin key`);
+			console.log(`-Set admin key- \n`);
 		}
 
 		const contractInstantiateSubmit = await contractInstantiateTx.execute(
@@ -236,7 +239,7 @@ async function main() {
 		// Log contract Id and Solidity address for contract
 		console.log(`The smart contract ID is: ${contractId}`);
 		console.log(
-			`The smart contract Solidity address is: ${contractAddress}`
+			`The smart contract Solidity address is: ${contractAddress} \n`
 		);
 
 		//----JUST FOR TESTING----Query the contract to check changes in state variable----JUST FOR TESTING
@@ -249,9 +252,7 @@ async function main() {
 			);
 		const contractQuerySubmit = await contractQueryTx.execute(client);
 		const contractQueryResult = contractQuerySubmit.getUint256(0);
-		console.log(
-			`- Here's the phone number that you asked for: ${contractQueryResult} \n`
-		);
+		console.log(`-Query-Alice's phone number is: ${contractQueryResult}`);
 	} catch (err) {
 		console.log(err);
 	}
