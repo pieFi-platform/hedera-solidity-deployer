@@ -114,6 +114,8 @@ FILE_MEMO = "Enter file memo"
 EXPIRATION_DAYS = "90"
 ```
 
+> **NOTE:** Depending on what you named your contract in SmartContractExample.sol, your filename of the .bin file may be different than the one listed here. Make sure you are including the correct filename/path for your project. 
+
 The last block represents the variables used to create the smart contract on the Hedera test network. The variables in this block are used in calling the following methods
 
 -   CONTRACT_GAS - setGas() - **required**
