@@ -15,13 +15,13 @@ import {
 import fs from "fs";
 
 // Configure accounts and client using .env
-const operatorId = AccountId.fromString(process.env.OPERATOR_ID);
-const operatorKey = PrivateKey.fromString(process.env.OPERATOR_PVKEY);
+const operatorId = AccountId.fromString(process.env.OPERATOR_ID.replace('"', ''));
+const operatorKey = PrivateKey.fromString(process.env.OPERATOR_PVKEY.replace('"', ''));
 
 const client = Client.forTestnet().setOperator(operatorId, operatorKey); // Currently only for testnet
 
 const keys: string[] = JSON.parse(process.env.KEYS);
-const signKeys = keys.map((key: string) => PrivateKey.fromString(key));
+const signKeys = keys.map((key: string) => PrivateKey.fromString(key.replace('"', '')));
 
 async function main() {
 	const chunkSize = 1024; // Max chunk size (Hedera uploads in chunks of 1kb)
