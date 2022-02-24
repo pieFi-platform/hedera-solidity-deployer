@@ -179,3 +179,17 @@ Don't forget to keep track of the
 -   Smart Contract Solidity Address
 
 for future use.
+
+## Testing with Foundry
+
+Install [foundry](https://github.com/gakonst/foundry)
+
+Run tests with:
+```
+$ forge test
+compiling...
+no files changed, compilation skipped.
+Running 2 tests for LookupContractTest.json:LookupContractTest
+[PASS] testGetMobileNumber() (gas: 2209)
+[PASS] testSetMobileNumber() (gas: 28223)
+```
