@@ -9,36 +9,54 @@ import {
 	FileAppendTransaction,
 	ContractCreateTransaction,
 	ContractFunctionParameters,
-	ContractCallQuery,
 	Hbar,
 } from "@hashgraph/sdk";
 import fs from "fs";
 
-// Configure accounts and client using .env
-const operatorId = AccountId.fromString(process.env.OPERATOR_ID.replace('"', ''));
-const operatorKey = PrivateKey.fromString(process.env.OPERATOR_PVKEY.replace('"', ''));
-
-const client = Client.forTestnet().setOperator(operatorId, operatorKey); // Currently only for testnet
-
-const keys: string[] = JSON.parse(process.env.KEYS);
-const signKeys = keys.map((key: string) => PrivateKey.fromString(key));
-
 async function main() {
+	// Hedera specific variables
 	const chunkSize = 1024; // Max chunk size (Hedera uploads in chunks of 1kb)
 	const successCode = 22; // A transaction receipt returns a status code of 22 if the transaction was a success
 
-	// Get bin path from .env
-	const contractBytecode = fs.readFileSync(process.env.BIN);
-
-	// Determine size of bin file and chunks
-	const contractBytecodeSizeB = fs.statSync(process.env.BIN).size;
-	const maxChunks = Math.ceil(contractBytecodeSizeB / chunkSize) + 1;
-	console.log("Contract size is: ", contractBytecodeSizeB);
-	console.log("Number of chunks is: ", maxChunks, `\n`);
-
 	try {
+		// Retrieve account info from .env
+		const operatorId = AccountId.fromString(
+			process.env.OPERATOR_ID.replace('"', "")
+		);
+		const operatorKey = PrivateKey.fromString(
+			process.env.OPERATOR_PVKEY.replace('"', "")
+		);
+
+		// Configure Hedera network and build client
+		const network = process.env.NETWORK.toLowerCase();
+
+		let client: Client;
+
+		if (network === "testnet") {
+			client = Client.forTestnet().setOperator(operatorId, operatorKey);
+		} else if (network === "mainnet") {
+			client = Client.forMainnet().setOperator(operatorId, operatorKey);
+		} else {
+			throw new Error(
+				`❌The Hedera network you entered is not valid. (Please enter either "Testnet" or "Mainnet")❌`
+			);
+		}
+
+		// Prepare signing keys
+		const keys: string[] = JSON.parse(process.env.KEYS);
+		const signKeys = keys.map((key: string) => PrivateKey.fromString(key));
+
+		// Get bin path from .env
+		const contractBytecode = fs.readFileSync(process.env.BIN);
+
+		// Determine size of bin file and chunks
+		const contractBytecodeSizeB = fs.statSync(process.env.BIN).size;
+		const maxChunks = Math.ceil(contractBytecodeSizeB / chunkSize) + 1;
+		console.log("Contract size is: ", contractBytecodeSizeB);
+		console.log("Number of chunks is: ", maxChunks, `\n`);
+
 		//////////////////Create empty file transaction//////////////////
-		console.log(`Creating file...`);
+		console.log(`⏱ Creating file...`);
 		const fileCreateTx = new FileCreateTransaction().setKeys(signKeys);
 
 		// Add any additional methods
@@ -51,7 +69,7 @@ async function main() {
 				parseInt(process.env.EXPIRATION_DAYS) * 24 * 60 * 60 * 1000; // Caclulating expiration days in milliseconds
 			fileCreateTx.setExpirationTime(
 				new Date(Date.now() + expirationDays)
-			); //ERROR - working with ~90 days, but returning AUTORENEW_DURATION_NOT_IN_RANGE otherwise
+			); //ERROR - working with ~90 days, but returning AUTORENEW_DURATION_NOT_IN_RANGE otherwise (functionality not fully built out)
 			console.log(`-Added expiration date- \n`);
 		}
 		// Freeze and sign
@@ -67,14 +85,14 @@ async function main() {
 
 		// Error if transaction failed
 		if (fileCreateStatus !== successCode || !bytecodeFileId) {
-			throw new Error(`The file creation transaction failed`);
+			throw new Error(`❌The file creation transaction failed❌`);
 		}
 
 		// Log bytecode file ID
-		console.log(`The bytecode file ID is: ${bytecodeFileId} \n`);
+		console.log(`✅The bytecode file ID is: ${bytecodeFileId} \n`);
 
 		//////////////////Append contents to the file//////////////////
-		console.log(`Appending to file...`);
+		console.log(`⏱ Appending to file...`);
 		const fileAppendTx = new FileAppendTransaction()
 			.setFileId(bytecodeFileId)
 			.setContents(contractBytecode)
@@ -91,11 +109,11 @@ async function main() {
 
 		// Error if transaction failed
 		if (fileAppendStatus !== successCode) {
-			throw new Error(`The file append transaction failed`);
+			throw new Error(`❌The file append transaction failed❌`);
 		}
 
 		// Log file append transaction status
-		console.log(`The file append was a : ${fileAppendRx.status} 👍 \n`);
+		console.log(`✅The file append was a : ${fileAppendRx.status} 👍 \n`);
 
 		//------Parse constructor parameters and create string-----
 		const parameters = process.env.CONSTRUCTOR_PARAMS
@@ -189,7 +207,7 @@ async function main() {
 		}
 
 		//////////////////Instantiate smart contract//////////////////
-		console.log(`Creating smart contract...`);
+		console.log(`⏱ Creating smart contract...`);
 		const contractInstantiateTx = new ContractCreateTransaction()
 			.setBytecodeFileId(bytecodeFileId)
 			.setGas(parseInt(process.env.CONTRACT_GAS));
@@ -197,12 +215,12 @@ async function main() {
 		// Add any additional methods
 		if (process.env.CONSTRUCTOR_PARAMS) {
 			contractInstantiateTx.setConstructorParameters(constructorParams);
-			console.log(`-Set constructor params-`);
+			console.log(`-Set constructor parameters-`);
 		}
 		if (process.env.INITIAL_HBAR_BALANCE) {
 			const hbarBalance = parseInt(process.env.INITIAL_HBAR_BALANCE);
 			contractInstantiateTx.setInitialBalance(new Hbar(hbarBalance));
-			console.log(`-Set initial balance-`);
+			console.log(`-Set initial Hbar balance-`);
 		}
 		if (process.env.PROXY_ACCOUNT_ID) {
 			contractInstantiateTx.setProxyAccountId(
@@ -232,27 +250,15 @@ async function main() {
 
 		// Error if transaction failed
 		if (contractInstantiateStatus !== successCode || !contractId) {
-			throw new Error(`The file append transaction failed`);
+			throw new Error(`❌The file append transaction failed❌`);
 		}
 		const contractAddress = contractId.toSolidityAddress();
 
 		// Log contract Id and Solidity address for contract
-		console.log(`The smart contract ID is: ${contractId}`);
+		console.log(`✅The smart contract ID is: ${contractId}`);
 		console.log(
-			`The smart contract Solidity address is: ${contractAddress} \n`
+			`✅The smart contract Solidity address is: ${contractAddress} \n`
 		);
-
-		//----JUST FOR TESTING----Query the contract to check changes in state variable----JUST FOR TESTING
-		const contractQueryTx = new ContractCallQuery()
-			.setContractId(contractId)
-			.setGas(100000)
-			.setFunction(
-				"getMobileNumber",
-				new ContractFunctionParameters().addString("Alice")
-			);
-		const contractQuerySubmit = await contractQueryTx.execute(client);
-		const contractQueryResult = contractQuerySubmit.getUint256(0);
-		console.log(`-Query-Alice's phone number is: ${contractQueryResult}`);
 	} catch (err) {
 		console.log(err);
 	}

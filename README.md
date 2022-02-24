@@ -2,6 +2,19 @@
 
 Deploy Solidity Contracts to Hedera Testnet Locally using JavaScript.
 
+## by [pieFi](https://piefi.io/)
+
+<p>
+     <img src="./logo.jpeg" width="100" />
+</p>
+
+Check us out [here](https://piefi.io/)!
+
+### Authors
+
+-   Kendra Morrey
+-   Taylor Buerger
+
 ## Get Started
 
 ### Clone
@@ -28,13 +41,17 @@ npm install
 
 ## Create Smart Contract
 
-Once the project has been created, the next step is to create the smart contract that we want to deploy. To create the contract file, create a .sol file in the src/contracts folder
+Once the project has been created, the next step is to create the smart contract that we want to deploy. We've included a sample smart contract in the src/example_contracts folder for you to check out.
+
+> **NOTE:** To learn how to write this example smart contract, check out [How to Deploy Smart Contracts on Hedera](https://hedera.com/blog/how-to-deploy-smart-contracts-on-hedera-part-1-a-simple-getter-and-setter-contract)
+
+Now to create your own contract file, create a .sol file in the src/contracts folder
 
 ```
 touch ./src/contracts/SmartContractExample.sol
 ```
 
-Now right your smart contract in this file using Solidity.
+and then write your smart contract in this file using Solidity.
 
 ### Compile Smart Contract to Bytecode
 
@@ -44,26 +61,25 @@ Once your contract is written, it'll first need to be compiled to bytecode befor
 npm run solcjs -- --bin ./src/contracts/SmartContractExample.sol -o ./src/contracts/bin
 ```
 
-Once the smart contract is compiled, we'll need to use the path of the newly created .bin file in the .env file as the BIN variable in the next step.
+Once the smart contract is compiled, we'll need to use the path of the newly created .bin file as the BIN variable when we create our .env file in the next step.
 
 ## Create .env File
 
 The .env file will store all of the variables needed to create the file on Hedera and deploy the smart contract.
 
-First, in the root of the project, add a .env file
+We've included an example .env file in the root of the project for you to edit with your respective data.
 
-```
-touch .env
-```
+> **NOTE:** We've included the .env file in the .gitignore. Remember to never push your .env file to a public repository, as it will contain sensitive information.
 
-within the .env file, create the following variables
+Within the .env file, you'll see the following variables, with required variables marked as such
 
 ```
 #Client variables
 OPERATOR_ID =               #REQUIRED
 OPERATOR_PVKEY =            #REQUIRED
+NETWORK =                   #REQUIRED
 
-#Create & Append File variables (KEYS must contain at least operator key)
+#Create & Append File variables (KEYS must at least contain operator key)
 KEYS =                      #REQUIRED
 BIN =                       #REQUIRED
 FILE_MEMO
@@ -78,21 +94,25 @@ PROXY_ACCOUNT_ID
 CONTRACT_MEMO
 ```
 
-The first block represents the variables used to create the Hedera client on the Hedera test network.
+The first block represents the variables used to create the Hedera client on the Hedera network.
 
 -   OPERATOR_ID - Account ID - **required**
 -   OPERATOR_PVKEY - Private Key - **required**
+-   NETWORK - Hedera Network - **required**
 
 > **NOTE:** If you do not already have a Hedera account, you can create a Hedera testnet account at the [Hedera portal](https://portal.hedera.com/register).
 
-Add the testnet Account ID and Private Key (example below)
+Add the Account ID and Private Key, and chose which Hedera network you would like to deploy to (must be either "Testnet" or "Mainnet"). See example below
+
+> **CAUTION:** Deploying to Mainnet will cost real Hbar.
 
 ```
 OPERATOR_ID = "0.0.12345678"
 OPERATOR_PVKEY = "302e020100300506032..."
+NETWORK = "Testnet"
 ```
 
-The next block represents the variables used to create and append the new file on the Hedera test network. The variables in this block are used in calling the following methods
+The next block represents the variables used to create and append the new file on the Hedera network. The variables in this block are used in calling the following methods
 
 -   KEYS - setKeys() - **required**
 -   BIN - setContents() - **required**
@@ -103,7 +123,7 @@ The next block represents the variables used to create and append the new file o
 
 For details regarding file properties, visit the Hedera docs to [create a file](https://docs.hedera.com/guides/docs/sdks/file-storage/create-a-file) and [append to a file](https://docs.hedera.com/guides/docs/sdks/file-storage/append-to-a-file).
 
-Add the file variables to the .env file using the format below **(leave all unused optional variables undeclared)**.
+Add the file variables to the .env file using the format below **(leave all unused optional variables undeclared - as shown in the example .env file)**.
 
 > **NOTE:** The KEYS variable **must** at least contain the Operator Private Key as the first element in the array. Any additional keys are optional.
 
@@ -114,9 +134,9 @@ FILE_MEMO = "Enter file memo"
 EXPIRATION_DAYS = "90"
 ```
 
-> **NOTE:** Depending on what you named your contract in SmartContractExample.sol, your filename of the .bin file may be different than the one listed here. Make sure you are including the correct filename/path for your project. 
+> **NOTE:** Depending on what you named your contract in SmartContractExample.sol, your filename of the .bin file may be different than the one listed here. Make sure you are including the correct filename/path for your project.
 
-The last block represents the variables used to create the smart contract on the Hedera test network. The variables in this block are used in calling the following methods
+The last block represents the variables used to create the smart contract on the Hedera network. The variables in this block are used in calling the following methods
 
 -   CONTRACT_GAS - setGas() - **required**
 -   CONSTRUCTOR_PARAMS - setConstructorParameters()
@@ -128,9 +148,10 @@ The last block represents the variables used to create the smart contract on the
 
 For details regarding smart contract properties, visit the Hedera docs to [create a smart contract](https://docs.hedera.com/guides/docs/sdks/smart-contracts/create-a-smart-contract).
 
-Add the file variables to the .env file using the format below **(leave all unused optional variables undeclared)**.
+Add the file variables to the .env file using the format below **(leave all unused optional variables undeclared - as shown in the example .env file)**.
 
 > **NOTE:** The constructor parameters **must** be included in the format shown below, where parameters are listed in order, with the first element of the array representing the **type** of the parameter, and the second element of the array representing the **value** of the parameter.
+> \*Additionally, this version of the deployer does not support functions as constructor parameters.
 
 ```
 CONTRACT_GAS = "100000"
@@ -143,16 +164,10 @@ CONTRACT_MEMO = "Enter contract memo"
 
 ## Deploy the Smart Contract
 
-We're just about ready to deploy the smart contract, all we need to do now is first, compile to JavaScript by running
+Now it's time to deploy the smart contract! All we need to do is run the following command
 
 ```
-npm run build
-```
-
-and finally, deploy the contract
-
-```
-npm run dev
+npm run deploy
 ```
 
 Congrats, your smart contract has now been deployed!🎉
