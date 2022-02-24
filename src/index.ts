@@ -21,7 +21,7 @@ const operatorKey = PrivateKey.fromString(process.env.OPERATOR_PVKEY.replace('"'
 const client = Client.forTestnet().setOperator(operatorId, operatorKey); // Currently only for testnet
 
 const keys: string[] = JSON.parse(process.env.KEYS);
-const signKeys = keys.map((key: string) => PrivateKey.fromString(key.replace('"', '')));
+const signKeys = keys.map((key: string) => PrivateKey.fromString(key));
 
 async function main() {
 	const chunkSize = 1024; // Max chunk size (Hedera uploads in chunks of 1kb)
