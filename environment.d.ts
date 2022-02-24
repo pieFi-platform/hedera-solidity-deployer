@@ -2,7 +2,7 @@ declare namespace NodeJS {
 	export interface ProcessEnv {
 		OPERATOR_ID: string;
 		OPERATOR_PVKEY: string;
-		OPERATOR_PBKEY: string;
+		NETWORK: string;
 		KEYS: string;
 		BIN: string;
 		FILE_MEMO: string | undefined;

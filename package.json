@@ -5,6 +5,7 @@
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
 	"scripts": {
+		"deploy": "tsc && node ./dist/index.js",
 		"build": "tsc",
 		"solcjs": "solcjs",
 		"auto": "tsc --watch --preserveWatchOutput",
