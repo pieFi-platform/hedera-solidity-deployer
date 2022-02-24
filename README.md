@@ -41,10 +41,8 @@ Now right your smart contract in this file using Solidity.
 Once your contract is written, it'll first need to be compiled to bytecode before being deployed. The following command will compile the smart contract and place it in the src/contracts/bin folder
 
 ```
-solcjs --bin ./src/contracts/SmartContractExample.sol -o ./src/contracts/bin
+npm run solcjs -- --bin ./src/contracts/SmartContractExample.sol -o ./src/contracts/bin
 ```
-
-> **NOTE:** If the solcjs command above fails, try reinstalling solc (npm install solc). 
 
 Once the smart contract is compiled, we'll need to use the path of the newly created .bin file in the .env file as the BIN variable in the next step.
 
