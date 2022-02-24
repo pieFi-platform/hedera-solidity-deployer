@@ -2,11 +2,11 @@
 
 Deploy Solidity Contracts to Hedera Testnet Locally using JavaScript.
 
+## by [pieFi](https://piefi.io/)
+
 <p>
      <img src="./logo.jpeg" width="100" />
 </p>
-
-## by [pieFi](https://piefi.io/)
 
 Check us out [here](https://piefi.io/)!
 
