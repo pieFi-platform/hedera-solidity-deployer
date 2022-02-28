@@ -186,9 +186,15 @@ Install [foundry](https://github.com/gakonst/foundry)
 
 Run tests with:
 ```
-$ forge test
+$ npm run test
+
+> hedera-solidity-deployer3@1.0.0 test /path/to/hedera-solidity-deployer
+> forge test
+
 compiling...
-no files changed, compilation skipped.
+Compiling 1 files with 0.8.12
+Compilation finished successfully
+success.
 Running 2 tests for LookupContractTest.json:LookupContractTest
 [PASS] testGetMobileNumber() (gas: 2209)
 [PASS] testSetMobileNumber() (gas: 28223)
